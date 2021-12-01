@@ -1,0 +1,103 @@
+##Hostility 
+
+##Download
+library(readxl)
+BLAugmentRedoComplic_DATA_2021_12_01_1210 <- read_excel("C:/Users/floresvx/Desktop/Augment Database/List of Augments/Database of IV, hostility/BLAugmentRedoComplic_DATA_2021-12-01_1210.xlsx")
+View(BLAugmentRedoComplic_DATA_2021_12_01_1210)
+
+SPHos <- BLAugmentRedoComplic_DATA_2021_12_01_1210
+
+##Packages
+library(lubridate)
+library(tidyverse)
+library(dplyr)
+library("writexl")
+
+##Create Sparse Tables 
+base <- subset(SPHos, SPHos$redcap_repeat_instrument == "NA" | is.na(redcap_repeat_instrument))
+View(blank)
+
+initialsurgery <- subset(SPHos, SPHos$redcap_repeat_instrument == "initial_reconstruction")
+View(initialsurgery)
+
+STComps <- subset(SPHos, SPHos$redcap_repeat_instrument == "day_complication_after_initial_reconstruction")
+View(STComps)
+
+LTComps <- subset(SPHos, SPHos$redcap_repeat_instrument == "additional_complications")
+View(LTComps)
+
+other_surgeries <- subset(SPHos, SPHos$redcap_repeat_instrument == "subsequent_surgeries")
+View(other_surgeries)
+
+fu <- subset(SPHos, SPHos$redcap_repeat_instrument == "recent_fu")
+
+##Create Relevant Table for Assessing Number of long term Complications 
+colnames(base)
+
+temp<- base[,c(1, 6, 7, 14, 15, 18, 19, 36, 63)]
+View(temp)
+temp1<- initialsurgery[,c(1, 97, 99, 114,117, 153, 154, 155, 156, 157, 159, 161, 166, 167, 168, 172, 179)]
+View(temp1)
+temp2<- LTComps[,c(1, 286, 287, 295:356)]
+
+LT<- merge(temp, temp1, by = "mrn")
+LT<- merge(LT, temp2, by = "mrn")
+View(LT)
+
+colnames(LT)
+
+##Subset for SB only and for primary surgery being first time augment
+SBLT <- subset(LT, LT$primary_dx == 1)
+View(SBLT)
+SBLT <-subset(SBLT, SBLT$primary_sx == 1)
+
+##remove NA from hostility
+SBLT <- SBLT %>% drop_na(hostile)
+length(unique(SBLT$mrn))
+
+##how many had no complications 
+SBLT_NAComps <- SBLT %>% filter(SBLT$thirtyday_comp_sx_v2 == "2") 
+View(SBLT_NAComps)
+length(unique(SBLT_NAComps$mrn))
+
+##Figure out how many have Clavien dindo > or =3
+SBLT_HG <- SBLT %>% filter(complication_clavien_v2 > "2") 
+view(SBLT_HG)
+length(unique(SBLT_HG$mrn))
+
+##How many had CD <3 
+SBLT_LG <- SBLT %>% filter(complication_clavien_v2 < "3") 
+View(SBLT_LG)
+length(unique(SBLT_LG$mrn))
+
+##Table for Complications 
+CC <- merge(temp, temp1, by = "mrn")
+CC <- merge(CC, temp2, by = "mrn")
+CC <- subset(CC, CC$primary_dx == 1)
+CC <-subset(CC, CC$primary_sx == 1)
+CC <- CC %>% drop_na(hostile)
+length(unique(CC$mrn))
+
+##CC1
+CC1 <- CC %>% filter(complication_clavien_v2 == "1") 
+View(CC1)
+length(CC1)
+
+colnames(CC1)
+CC1.1 <- CC1[,c(1, 28:89)]
+
+CC1.2 <- CC1.1 %>% mutate_at(vars(3:62), as.numeric)
+View(colSums(CC1.1[,c(13:62)], na.rm = FALSE))
+CC1.2$sum_of_complications_per_event <- rowSums(CC1.2[,c(13:62)])
+View(CC1.2)
+write_xlsx(CC1.2,"C:\\Users\\floresvx\\Desktop\\Augment Database\\CC1.xlsx")
+
+##CC2 
+CC2 <- CC %>% filter(complication_clavien_v2 == "2")
+CC2 <- CC2[,c(1, 28:89)]
+View(CC2)
+
+CC2 <- CC2 %>% mutate_at(vars(3:62), as.numeric)
+View(colSums(CC2[,c(13:62)], na.rm = FALSE))
+CC2$sum_of_complications_per_event <- rowSums(CC2[,c(13:62)])
+write_xlsx(CC2,"C:\\Users\\floresvx\\Desktop\\Augment Database\\CC2.xlsx")
